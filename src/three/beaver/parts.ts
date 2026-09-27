@@ -2,6 +2,14 @@ import * as THREE from "three"
 import type { BeaverAppearance } from "../../domain"
 import { BeaverPart } from "./BeaverPart"
 
+export const eyeForwardX = (appearance: BeaverAppearance, z: number): number => {
+  const radiusX = 0.47 * appearance.headScale[0]
+  const radiusY = 0.47 * appearance.headScale[1]
+  const radiusZ = 0.47 * appearance.headScale[2]
+  const normalizedX = Math.max(0, 1 - ((1.35 - 1.22) / radiusY) ** 2 - (z / radiusZ) ** 2)
+  return 0.17 + radiusX * Math.sqrt(normalizedX) + 0.02
+}
+
 export class TorsoPart extends BeaverPart {
   constructor(fur: string, appearance: BeaverAppearance) {
     super()
@@ -35,8 +43,9 @@ export class FacePart extends BeaverPart {
 
     for (const side of [-1, 1]) {
       const z = side * appearance.eyeSpacing
-      this.addMesh(new THREE.SphereGeometry(0.092, 10, 8), "#fffdf3", [1, 1.08, 1], [0.43, 1.35, z])
-      this.addMesh(new THREE.SphereGeometry(0.044, 8, 7), "#14100d", [1, 1, 1], [0.51, 1.35, z])
+      const eyeX = eyeForwardX(appearance, z)
+      this.addMesh(new THREE.SphereGeometry(0.092, 10, 8), "#fffdf3", [1, 1.08, 1], [eyeX, 1.35, z])
+      this.addMesh(new THREE.SphereGeometry(0.044, 8, 7), "#14100d", [1, 1, 1], [eyeX + 0.075, 1.35, z])
       this.addMesh(new THREE.SphereGeometry(appearance.earSize, 10, 8), fur, [0.72, 1, 1], [-0.04, 1.5, z * 1.55])
       const tooth = this.addMesh(
         new THREE.BoxGeometry(0.15, 0.23, 0.065),
@@ -62,9 +71,9 @@ export class TailPart extends BeaverPart {
 export class ArmPart extends BeaverPart {
   readonly pivot = this.object
 
-  constructor(fur: string, front: boolean) {
+  constructor(fur: string, front: boolean, appearance: BeaverAppearance) {
     super()
-    this.object.position.set(0.28, 0.93, front ? 0.57 : -0.43)
+    this.object.position.set(0.28, 0.93, (front ? 1 : -1) * 0.38 * appearance.bodyScale[2])
     this.addMesh(new THREE.CapsuleGeometry(0.115, 0.34, 4, 9), fur, [1, 1, 1], [0, -0.23, 0])
     this.addMesh(new THREE.SphereGeometry(0.13, 10, 8), fur, [1.12, 0.82, 0.9], [0.02, -0.47, 0])
   }

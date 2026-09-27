@@ -32,10 +32,10 @@ export class BeaverModel extends SceneEntity {
     const tail = new TailPart("#563320", racer.appearance)
     const leftLeg = new LegPart(racer.fur, true)
     const rightLeg = new LegPart(racer.fur, false)
-    const leftArm = new ArmPart(racer.fur, true)
-    const rightArm = new ArmPart(racer.fur, false)
+    const leftArm = new ArmPart(racer.fur, true, racer.appearance)
+    const rightArm = new ArmPart(racer.fur, false, racer.appearance)
     this.object.add(rightArm.object, rightLeg.object, tail.object, torso.object, belly.object, head.object, face.object, leftLeg.object, leftArm.object)
-    if (withBadge) this.object.add(new DriverBadge(racer.sticker).object)
+    if (withBadge) this.object.add(new DriverBadge(racer.sticker, racer.appearance).object)
     this.accessory = new AccessoryFactory().create(racer)
     this.object.add(this.accessory.object)
     this.rig = { leftLeg, rightLeg, leftArm, rightArm, tail }

@@ -1,8 +1,9 @@
 import * as THREE from "three"
-import type { Racer } from "../../domain"
+import type { BeaverAppearance, Racer } from "../../domain"
 import { MeshFactory } from "../core/MeshFactory"
 import { SceneEntity } from "../core/SceneEntity"
 import { TextTexture } from "../core/TextTexture"
+import { eyeForwardX } from "./parts"
 
 export abstract class BeaverAccessory extends SceneEntity {}
 
@@ -50,14 +51,17 @@ export class CapeAccessory extends BeaverAccessory {
 }
 
 export class GlassesAccessory extends BeaverAccessory {
-  constructor() {
+  constructor(appearance: BeaverAppearance) {
     super()
-    for (const x of [0.27, 0.53]) {
+    const lensX = eyeForwardX(appearance, appearance.eyeSpacing) + 0.12
+    for (const side of [-1, 1]) {
       const lens = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.028, 7, 16), MeshFactory.material("#151b18", 0.35))
-      lens.position.set(x, 1.34, 0.285)
+      lens.position.set(lensX, 1.35, side * appearance.eyeSpacing)
+      lens.rotation.y = Math.PI / 2
       this.object.add(lens)
     }
-    this.object.add(MeshFactory.mesh(new THREE.BoxGeometry(0.17, 0.025, 0.025), "#151b18", [1, 1, 1], [0.4, 1.34, 0.285]))
+    const bridgeLength = Math.max(0.1, appearance.eyeSpacing * 2 - 0.23)
+    this.object.add(MeshFactory.mesh(new THREE.BoxGeometry(0.025, 0.025, bridgeLength), "#151b18", [1, 1, 1], [lensX, 1.35, 0]))
   }
 }
 
@@ -78,7 +82,7 @@ export class AccessoryFactory {
       case "Красная кепка": return new CapAccessory(racer.accent)
       case "Котелок": return new BowlerHatAccessory()
       case "Плащ чемпиона": return new CapeAccessory(racer.accent)
-      case "Круглые очки": return new GlassesAccessory()
+      case "Круглые очки": return new GlassesAccessory(racer.appearance)
       case "Молния на хвосте": return new TailBoltAccessory()
     }
   }
