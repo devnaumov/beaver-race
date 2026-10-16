@@ -59,6 +59,7 @@ const raceSetup = setup({
   types: {
     context: {} as GameContext,
     events: {} as GameEvent,
+    input: {} as { readonly racerNames?: ReadonlyArray<string> } | void,
   },
   actors: {
     measuredCountdownActor,
@@ -133,8 +134,8 @@ const raceSetup = setup({
 export const gameMachine = raceSetup.createMachine({
   id: "beaver-race",
   initial: "lobby",
-  context: {
-    racers: [createRacer("Алекс"), createRacer("Маша"), createRacer("Дима")],
+  context: ({ input }) => ({
+    racers: (input && input.racerNames?.map((name) => createRacer(name))) ?? [createRacer("Алекс"), createRacer("Маша"), createRacer("Дима")],
     winnerId: null,
     countdown: 3,
     elapsed: 0,
@@ -142,7 +143,7 @@ export const gameMachine = raceSetup.createMachine({
     error: null,
     raceNumber: 0,
     racePlan: null,
-  },
+  }),
   states: {
     lobby: {
       on: {
