@@ -7,7 +7,7 @@ export class RiverBank extends SceneEntity {
     super()
     this.object.add(MeshFactory.mesh(new THREE.BoxGeometry(23, 0.32, 0.62), color, [1, 1, 1], [0, -0.08, z]))
     for (let index = 0; index < 18; index += 1) {
-      const reed = MeshFactory.mesh(new THREE.CylinderGeometry(0.018, 0.027, 0.62 + (index % 3) * 0.14, 5), index % 2 ? "#5f7d31" : "#7e9138", [1, 1, 1], [-10.2 + index * 1.2, 0.24, z + (index % 2 ? 0.18 : -0.18)])
+      const reed = MeshFactory.mesh(new THREE.CylinderGeometry(0.018, 0.027, 0.62 + (index % 3) * 0.14, 5), index % 2 ? "#786141" : "#8e7546", [1, 1, 1], [-10.2 + index * 1.2, 0.24, z + (index % 2 ? 0.18 : -0.18)])
       reed.rotation.z = (index % 3 - 1) * 0.12
       this.object.add(reed)
     }
@@ -16,6 +16,7 @@ export class RiverBank extends SceneEntity {
 
 export class RiverEnvironment extends SceneEntity {
   private readonly material: THREE.ShaderMaterial
+  private readonly mist: THREE.ShaderMaterial
 
   constructor() {
     super()
@@ -23,8 +24,8 @@ export class RiverEnvironment extends SceneEntity {
       transparent: true,
       uniforms: {
         time: { value: 0 },
-        deep: { value: new THREE.Color("#246d84") },
-        shallow: { value: new THREE.Color("#64c4c4") },
+        deep: { value: new THREE.Color("#172c3f") },
+        shallow: { value: new THREE.Color("#657b8c") },
       },
       vertexShader: `uniform float time; varying float wave; varying vec2 vUv; void main(){ vUv=uv; vec3 p=position; wave=sin(p.x*1.8+time*1.7)*0.035+sin(p.y*4.0-time*2.1)*0.018; p.z+=wave; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
       fragmentShader: `uniform float time; uniform vec3 deep; uniform vec3 shallow; varying float wave; varying vec2 vUv; void main(){ float stripe=pow(max(0.0,sin(vUv.x*48.0+vUv.y*10.0-time*2.4)),18.0); vec3 color=mix(deep,shallow,vUv.y*0.72+wave*2.0)+stripe*vec3(0.42,0.42,0.3); gl_FragColor=vec4(color,0.94); }`,
@@ -33,10 +34,20 @@ export class RiverEnvironment extends SceneEntity {
     water.rotation.x = -Math.PI / 2
     water.position.set(0, 0.015, -5.35)
     water.receiveShadow = true
-    this.object.add(water, new RiverBank(-3.72, "#668940").object, new RiverBank(-6.98, "#527638").object)
+    this.mist = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      uniforms: { time: { value: 0 } },
+      vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+      fragmentShader: `uniform float time;varying vec2 vUv;void main(){float edge=sin(vUv.x*3.14159)*sin(vUv.y*3.14159);float w=sin(vUv.x*22.0+sin(vUv.y*8.0)+time*0.25)*0.5+0.5;gl_FragColor=vec4(0.72,0.69,0.85,edge*w*0.22);}`,
+    })
+    const mist = new THREE.Mesh(new THREE.PlaneGeometry(24, 4), this.mist)
+    mist.rotation.x = -Math.PI / 2 + 0.12
+    mist.position.set(0, 0.6, -5.6)
+    this.object.add(water, mist, new RiverBank(-3.72, "#494039").object, new RiverBank(-6.98, "#3c3540").object)
   }
 
   override update(_delta: number, elapsed: number): void {
     this.material.uniforms.time!.value = elapsed
+    this.mist.uniforms.time!.value = elapsed
   }
 }

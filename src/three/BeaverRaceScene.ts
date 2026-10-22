@@ -61,8 +61,8 @@ export class BeaverRaceScene {
     this.renderer.shadowMap.type = THREE.PCFShadowMap
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.1
-    this.renderer.domElement.setAttribute("aria-label", "Трехмерная беговая дорожка с бобрами, рекой и лесным небом")
+    this.renderer.toneMappingExposure = 1.15
+    this.renderer.domElement.setAttribute("aria-label", "Halloween beaver race with costumed racers, glowing pumpkins, bats, and a moonlit forest")
     this.host.append(this.renderer.domElement)
 
     this.camera.position.set(0, 8.2, 15.5)
@@ -107,8 +107,8 @@ export class BeaverRaceScene {
   readonly cleanup: () => void
 
   private addLighting(): void {
-    this.scene.add(new THREE.HemisphereLight("#fff0c4", "#274d3c", 2.35))
-    const sun = new THREE.DirectionalLight("#fff0c2", 4.4)
+    this.scene.add(new THREE.HemisphereLight("#b8b2ef", "#35233d", 2.1))
+    const sun = new THREE.DirectionalLight("#ffe0bc", 3.2)
     sun.position.set(-5, 11, 7)
     sun.castShadow = true
     sun.shadow.mapSize.set(1536, 1536)
@@ -117,6 +117,9 @@ export class BeaverRaceScene {
     sun.shadow.camera.top = 11
     sun.shadow.camera.bottom = -7
     this.scene.add(sun)
+    const moonlight = new THREE.DirectionalLight("#969bff", 2.3)
+    moonlight.position.set(-7, 7, -10)
+    this.scene.add(moonlight)
   }
 
   private syncRacers(nextRacers: ReadonlyArray<Racer>): void {
