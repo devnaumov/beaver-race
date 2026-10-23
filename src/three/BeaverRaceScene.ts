@@ -9,6 +9,7 @@ import { ForestBackdrop } from "./environment/ForestBackdrop"
 import { RiverEnvironment } from "./environment/RiverEnvironment"
 import { SkyEnvironment } from "./environment/SkyEnvironment"
 import { TrackEnvironment } from "./environment/TrackEnvironment"
+import { PullRequestBubbles } from "./PullRequestBubbles"
 
 type RacePhase = "lobby" | "countdown" | "racing" | "finishing" | "finished"
 
@@ -44,6 +45,7 @@ export class BeaverRaceScene {
   private readonly duel = new BackgroundDuel()
   private readonly entities: ReadonlyArray<SceneEntity>
   private readonly resizeObserver: ResizeObserver
+  private readonly pullRequestBubbles: PullRequestBubbles
   private frame = 0
   private phase: RacePhase = "lobby"
   private elapsed = 0
@@ -64,6 +66,7 @@ export class BeaverRaceScene {
     this.renderer.toneMappingExposure = 1.15
     this.renderer.domElement.setAttribute("aria-label", "Halloween beaver race with costumed racers, glowing pumpkins, bats, and a moonlit forest")
     this.host.append(this.renderer.domElement)
+    this.pullRequestBubbles = new PullRequestBubbles(this.host)
 
     this.camera.position.set(0, 8.2, 15.5)
     this.camera.lookAt(0, 0.45, -1)
@@ -96,6 +99,7 @@ export class BeaverRaceScene {
       subscription.unsubscribe()
       this.resizeObserver.disconnect()
       this.timer.dispose()
+      this.pullRequestBubbles.dispose()
       this.racers.forEach((view) => view.dispose())
       this.racers.clear()
       this.entities.forEach((entity) => entity.dispose())
@@ -279,6 +283,9 @@ export class BeaverRaceScene {
     this.racers.forEach((view) => view.update(delta))
     this.updateFinishTape()
     this.updateCamera(delta)
+    const ratio = this.elapsed / Math.max(1, this.duration)
+    const closeUp = (this.phase === "racing" && ((ratio >= 0.18 && ratio < 0.52) || ratio >= 0.9)) || this.phase === "finishing"
+    this.pullRequestBubbles.update(elapsed, closeUp, this.racers, this.camera)
     this.renderer.render(this.scene, this.camera)
   }
 }
