@@ -1,10 +1,11 @@
 import { useAtomValue } from "@effect/atom-react"
-import type { FormEvent } from "react"
+import type { FormEvent, KeyboardEvent } from "react"
 import { databaseStickers } from "./domain"
 import { driverIconUrl } from "./driverIcons"
 import { gameAtom, sendGameEvent } from "./store"
 import { mountRaceScene } from "./three/BeaverRaceScene"
 import { costumeNames } from "./christmas"
+import { PREVIEW_DURATION } from "./race/RaceCourse"
 
 const BeaverMark = () => (
   <svg className="brand-mark" viewBox="0 0 72 72" aria-hidden="true">
@@ -39,16 +40,32 @@ const WinnerBeaver = ({ fur, accent, sticker }: { fur: string; accent: string; s
   </div>
 )
 
+const keepResultsFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+  if (event.key !== "Tab") return
+  const first = event.currentTarget.querySelector<HTMLElement>(".race-results")
+  const last = event.currentTarget.querySelector<HTMLButtonElement>("button")
+  if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+    event.preventDefault()
+    ;(event.shiftKey ? last : first)?.focus()
+  }
+}
+
 export const App = () => {
   const snapshot = useAtomValue(gameAtom)
   const { racers, winnerId, countdown, elapsed, duration, error, raceNumber } = snapshot.context
   const isLobby = snapshot.matches("lobby")
+  const isPreview = snapshot.matches("preview")
   const isCountdown = snapshot.matches("countdown")
   const isRacing = snapshot.matches("racing")
   const isFinishing = snapshot.matches("finishing")
   const isFinished = snapshot.matches("finished")
   const winner = racers.find((racer) => racer.id === winnerId)
   const standings = [...racers].sort((a, b) => b.progress - a.progress)
+  const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1_000))
+  const leader = standings[0]
+  const raceProgress = Math.min(100, leader?.progress ?? 0)
+  const finalStretch = isRacing && remaining <= 4
+  const raceStatus = isFinishing ? "FINISH!" : finalStretch ? "FINAL STRETCH" : elapsed < 1_000 ? "GO, GO, GO!" : "RACE IN PROGRESS"
 
   const addRacer = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -57,6 +74,18 @@ export const App = () => {
     sendGameEvent({ type: "ADD_RACER", name: String(data.get("name") ?? "") })
     form.reset()
     form.querySelector<HTMLInputElement>("input")?.focus()
+  }
+
+  const startRace = () => {
+    sendGameEvent({ type: "START" })
+    if (racers.length >= 2) {
+      document.querySelector(".broadcast-panel")?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" })
+    }
+  }
+
+  const resetRace = () => {
+    sendGameEvent({ type: "RESET" })
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".start-button")?.focus({ preventScroll: true }))
   }
 
   return (
@@ -82,7 +111,7 @@ export const App = () => {
         <div className="hero-stats">
           <div><strong>{String(racers.length).padStart(2, "0")}</strong><span>MERRY<br />RACERS</span></div>
           <div><strong>{String(raceNumber).padStart(2, "0")}</strong><span>RACE<br />NUMBER</span></div>
-          <div><strong>{isRacing ? Math.max(1, Math.ceil((duration - elapsed) / 1_000)) : isFinishing ? "0" : "∞"}</strong><span>SECONDS<br />TO GLORY</span></div>
+          <div><strong>{isRacing ? remaining : isFinishing || isFinished ? "0" : duration / 1_000}</strong><span>SECONDS<br />TO GLORY</span></div>
         </div>
       </section>
 
@@ -129,15 +158,34 @@ export const App = () => {
           <div className="broadcast-bar">
             <div className="on-air"><span /> LIVE FROM THE NORTH POLE</div>
             <div className="fight-label">DBEAVER <b>VS</b> CLOUDBEAVER</div>
-            <div className="camera-label">CAM 01 · SNOWY TRACK</div>
+            <div className="camera-label">{isPreview ? "CAM 00 · WINTER GATHERING" : "CAM 01 · SNOWY TRACK"}</div>
           </div>
-          <div className="scene-wrap">
+          <div className={`scene-wrap${isPreview ? " is-preview" : ""}`}>
             <div className="winter-glow" />
             <div className="three-stage" ref={mountRaceScene} />
             <div className="scene-vignette" />
             {isLobby && <div className="scene-prompt"><span>A LITTLE NORTH POLE MAGIC</span><b>Ready, set, snow.</b></div>}
+            {isPreview && <div className="crew-intro" style={{ "--preview-duration": `${PREVIEW_DURATION}ms` } as React.CSSProperties}>
+              <div className="crew-intro-heading" role="status"><span>BEFORE THE START</span><b>Meet the merry crew.</b><small>{racers.length} racers. One Christmas cup.</small></div>
+              <div className="crew-intro-footer"><span>THE CALM BEFORE THE RACE</span><small>Countdown up next</small></div>
+              <div className="crew-intro-progress" aria-hidden="true"><i /></div>
+            </div>}
             {isCountdown && <div className="countdown" key={countdown}><small>TIME TO JINGLE</small><strong>{countdown}</strong></div>}
-            {(isRacing || isFinishing) && <div className="race-clock"><small>RACE TIME</small><b>{(elapsed / 1_000).toFixed(1)}s</b></div>}
+            {(isRacing || isFinishing) && <>
+              <div className={`race-hud${finalStretch || isFinishing ? " is-final" : ""}`}>
+                <span key={raceStatus} role="status">{raceStatus}</span>
+                <b>{isFinishing ? winner?.name : leader?.name}</b>
+                <small>{isFinishing ? "TAKES THE CHRISTMAS CUP" : "LEADING THE PACK"}</small>
+              </div>
+              <div className="race-clock"><small>TIME TO FINISH</small><b>{String(Math.floor(remaining / 60)).padStart(2, "0")}:{String(remaining % 60).padStart(2, "0")}</b><span>{(elapsed / 1_000).toFixed(1)} / {duration / 1_000}s</span></div>
+              <div className="course-hud">
+                <div className="course-labels"><span>START</span><b>{isFinishing ? "FINISHED" : `${Math.floor(raceProgress)}% OF THE COURSE`}</b><span>FINISH ⚑</span></div>
+                <div className="course-map" role="progressbar" aria-label="Race progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(raceProgress)}>
+                  <div className="course-fill" style={{ transform: `scaleX(${raceProgress / 100})` }} />
+                  {racers.map((racer, index) => <i key={racer.id} className={racer.id === leader?.id ? "is-leader" : ""} style={{ left: `${Math.min(100, racer.progress)}%`, top: `${5 + index % 3 * 5}px`, background: racer.accent }} title={racer.name} />)}
+                </div>
+              </div>
+            </>}
           </div>
 
           <div className="race-console">
@@ -145,14 +193,14 @@ export const App = () => {
               <span className="console-label">THE MERRY LEADERBOARD</span>
               <div>
                 {standings.slice(0, 5).map((racer, index) => (
-                  <span key={racer.id} className={index === 0 && !isLobby ? "leader" : ""}>
+                  <span key={racer.id} className={index === 0 && (isRacing || isFinishing || isFinished) ? "leader" : ""}>
                     <i>{index + 1}</i>{racer.name}<b>{Math.round(racer.progress)}%</b>
                   </span>
                 ))}
               </div>
             </div>
-            <button className="start-button" type="button" onClick={() => sendGameEvent({ type: "START" })} disabled={!isLobby}>
-              <span>{isLobby ? "JINGLE ALL THE WAY" : isFinished || isFinishing ? "FINISH" : "RACE IN PROGRESS"}</span>
+            <button className="start-button" type="button" onClick={startRace} disabled={!isLobby}>
+              <span>{isLobby ? "JINGLE ALL THE WAY" : isPreview ? "MEET THE CREW" : isCountdown ? "GET READY" : isFinished || isFinishing ? "FINISH" : "RACE IN PROGRESS"}</span>
               <b>{isLobby ? "BEAVERS" : "•••"}</b>
               <i>→</i>
             </button>
@@ -168,14 +216,17 @@ export const App = () => {
       <footer><b>BEAVER RACE © 2026 · CHRISTMAS EDITION</b><span>Fair races. Festive faces.</span><small>No presents were lost in the making of this race.</small></footer>
 
       {isFinished && winner && (
-        <div className="winner-overlay" role="dialog" aria-modal="true" aria-labelledby="winner-title">
+        <div className="winner-overlay" role="dialog" aria-modal="true" aria-labelledby="winner-title" onKeyDown={keepResultsFocus}>
           <div className="confetti c1" /><div className="confetti c2" /><div className="confetti c3" />
           <div className="winner-rays" />
           <div className="winner-copy">
             <span>CHRISTMAS GLORY GOES TO · RACE #{String(raceNumber).padStart(2, "0")}</span>
             <h2 id="winner-title">{winner.name}</h2>
             <p>{costumeNames[winner.accessory]} · Team {winner.sticker.name}</p>
-            <button type="button" onClick={() => sendGameEvent({ type: "RESET" })}>One more jingle <b>↻</b></button>
+            <ol className="race-results" aria-label="Final standings" tabIndex={0}>
+              {standings.map((racer, index) => <li key={racer.id}><span>{String(index + 1).padStart(2, "0")}</span><b>{racer.name}</b><small>{index === 0 ? `${duration / 1_000}s · WINNER` : racer.sticker.name}</small></li>)}
+            </ol>
+            <button ref={(node) => { node?.focus({ preventScroll: true }) }} type="button" onClick={resetRace}>Race again <b>↻</b></button>
           </div>
           <WinnerBeaver fur={winner.fur} accent={winner.accent} sticker={driverIconUrl(winner.sticker.id)} />
           <div className="winner-word">HO HO GO!</div>

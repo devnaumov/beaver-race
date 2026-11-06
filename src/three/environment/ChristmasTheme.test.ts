@@ -28,9 +28,20 @@ describe("Christmas theme", () => {
 
   it("keeps gift decorations outside the lanes and the finish tape working", () => {
     const track = new TrackEnvironment()
-    const presents = track.object.children.filter((child) => child instanceof THREE.Group).slice(1)
-    expect(presents).toHaveLength(12)
-    expect(presents.every((gift) => Math.abs(gift.position.z) > 3.32)).toBe(true)
+    const batches = track.object.children.filter((child) => child.name === "track-gifts") as THREE.InstancedMesh[]
+    expect(batches).toHaveLength(8)
+    const matrix = new THREE.Matrix4()
+    for (const batch of batches) {
+      expect(batch.count).toBe(36)
+      for (let index = 0; index < batch.count; index += 1) {
+        batch.getMatrixAt(index, matrix)
+        expect(Math.abs(matrix.elements[14]!)).toBeGreaterThan(3.32)
+      }
+    }
+    expect(track.finish.visible).toBe(false)
+    track.setTravel(50, 5, true)
+    expect(track.finish.visible).toBe(true)
+    expect(track.finish.position.x).toBe(5)
     expect(track.isFinishTapeTorn).toBe(false)
     track.tearFinishTape()
     track.update(0.1)

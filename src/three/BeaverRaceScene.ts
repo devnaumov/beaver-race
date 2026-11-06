@@ -1,10 +1,13 @@
 import * as THREE from "three"
 import type { Racer } from "../domain"
+import type { RacePhase } from "../gameMachine"
 import { gameActor } from "../store"
+import { PREVIEW_DURATION, RaceCourse } from "../race/RaceCourse"
 import { appearanceKeyFor } from "./beaver/BeaverModel"
 import { RacerView } from "./beaver/RacerView"
 import type { SceneEntity } from "./core/SceneEntity"
 import { BackgroundDuel } from "./environment/BackgroundDuel"
+import { CrewPreview } from "./environment/CrewPreview"
 import { ForestBackdrop } from "./environment/ForestBackdrop"
 import { RiverEnvironment } from "./environment/RiverEnvironment"
 import { SkyEnvironment } from "./environment/SkyEnvironment"
@@ -12,15 +15,11 @@ import { Snowfall } from "./environment/Snowfall"
 import { TrackEnvironment } from "./environment/TrackEnvironment"
 import { PullRequestBubbles } from "./PullRequestBubbles"
 
-type RacePhase = "lobby" | "countdown" | "racing" | "finishing" | "finished"
-
 interface CameraPose {
   readonly position: THREE.Vector3
   readonly target: THREE.Vector3
   readonly fov: number
 }
-
-const FINISH_X = 7.75
 
 const blendPose = (from: CameraPose, to: CameraPose, amount: number): CameraPose => {
   const t = THREE.MathUtils.smoothstep(amount, 0, 1)
@@ -46,21 +45,25 @@ export class BeaverRaceScene {
   private readonly track = new TrackEnvironment()
   private readonly forest = new ForestBackdrop()
   private readonly duel = new BackgroundDuel()
+  private readonly preview = new CrewPreview()
   private readonly entities: ReadonlyArray<SceneEntity>
   private readonly resizeObserver: ResizeObserver
   private readonly pullRequestBubbles: PullRequestBubbles
   private frame = 0
   private phase: RacePhase = "lobby"
   private elapsed = 0
-  private duration = 10_000
+  private course = new RaceCourse()
+  private duration = this.course.duration
+  private travel = 0
+  private targetTravel = 0
   private winnerId: string | null = null
   private raceNumber = 0
-  private horizontalScale = 1
   private compact = false
   private cameraInitialized = false
+  private previewStartedAt = 0
 
   constructor(private readonly host: HTMLElement) {
-    this.entities = [this.sky, this.forest, this.river, this.track, this.duel, this.snow]
+    this.entities = [this.sky, this.forest, this.river, this.track, this.duel, this.snow, this.preview]
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFShadowMap
@@ -73,21 +76,23 @@ export class BeaverRaceScene {
 
     this.camera.position.set(0, 8.2, 15.5)
     this.camera.lookAt(0, 0.45, -1)
-    this.scene.add(this.sky.object, this.forest.object, this.river.object, this.track.object, this.duel.object, this.snow.object, this.racerLayer)
+    this.scene.add(this.sky.object, this.forest.object, this.river.object, this.track.object, this.duel.object, this.snow.object, this.racerLayer, this.preview.object)
     this.addLighting()
 
     const subscription = gameActor.subscribe((snapshot) => {
-      this.phase = snapshot.value as RacePhase
+      this.syncPhase(snapshot.value as RacePhase)
       this.elapsed = snapshot.context.elapsed
       this.duration = snapshot.context.duration
+      if (this.course.duration !== this.duration) this.course = new RaceCourse(this.duration)
       this.winnerId = snapshot.context.winnerId
       this.syncRacers(snapshot.context.racers)
       this.syncFinishTape(snapshot.context.raceNumber)
     })
     const initialSnapshot = gameActor.getSnapshot()
-    this.phase = initialSnapshot.value as RacePhase
+    this.syncPhase(initialSnapshot.value as RacePhase)
     this.elapsed = initialSnapshot.context.elapsed
     this.duration = initialSnapshot.context.duration
+    this.course = new RaceCourse(this.duration)
     this.winnerId = initialSnapshot.context.winnerId
     this.syncRacers(initialSnapshot.context.racers)
     this.syncFinishTape(initialSnapshot.context.raceNumber)
@@ -113,6 +118,21 @@ export class BeaverRaceScene {
 
   readonly cleanup: () => void
 
+  private syncPhase(nextPhase: RacePhase): void {
+    if (this.phase === nextPhase) return
+    const wasPreview = this.phase === "preview"
+    this.phase = nextPhase
+    const previewing = nextPhase === "preview"
+    this.preview.object.visible = previewing
+    this.racerLayer.visible = !previewing
+    for (const entity of [this.track, this.forest, this.river, this.duel]) entity.object.visible = !previewing
+    if (previewing) this.previewStartedAt = performance.now()
+    if (previewing || wasPreview) this.cameraInitialized = false
+    this.renderer.domElement.setAttribute("aria-label", previewing
+      ? "Meet the racers in their selected Christmas costumes around a snowy woodland campfire"
+      : "Christmas beaver race with festive costumes, presents, decorated fir trees, and falling snow")
+  }
+
   private addLighting(): void {
     this.scene.add(new THREE.HemisphereLight("#d6edf1", "#324e48", 2.1))
     const sun = new THREE.DirectionalLight("#fff0cf", 3.2)
@@ -130,6 +150,14 @@ export class BeaverRaceScene {
   }
 
   private syncRacers(nextRacers: ReadonlyArray<Racer>): void {
+    if (this.phase === "preview") this.preview.setRacers(nextRacers, this.compact)
+    const leaderProgress = Math.max(0, ...nextRacers.map((racer) => racer.progress))
+    this.targetTravel = this.course.travel(leaderProgress)
+    if (this.phase === "lobby") {
+      this.travel = 0
+      this.track.setTravel(0, this.course.finishX(0), false)
+      this.cameraInitialized = false
+    }
     const nextIds = new Set(nextRacers.map((racer) => racer.id))
     this.racers.forEach((view, id) => {
       if (nextIds.has(id)) return
@@ -137,7 +165,7 @@ export class BeaverRaceScene {
       this.racers.delete(id)
     })
 
-    const laneWidth = Math.min(0.58, 6.25 / Math.max(nextRacers.length - 1, 1))
+    const laneWidth = Math.min(1.5, 6.25 / Math.max(nextRacers.length - 1, 1))
     nextRacers.forEach((racer, index) => {
       let view = this.racers.get(racer.id)
       if (view && view.appearanceKey !== appearanceKeyFor(racer)) {
@@ -152,7 +180,7 @@ export class BeaverRaceScene {
       }
       const laneZ = (index - (nextRacers.length - 1) / 2) * laneWidth
       const scale = nextRacers.length > 8 ? 0.67 : nextRacers.length > 5 ? 0.77 : 0.88
-      view.setSnapshot(racer, laneZ, scale, this.phase, this.horizontalScale)
+      view.setSnapshot(racer, laneZ, scale, this.phase, this.course.racerX(racer.progress, leaderProgress), this.course.finishX(this.targetTravel), racer.speed * this.course.length / 100)
     })
   }
 
@@ -171,22 +199,13 @@ export class BeaverRaceScene {
   private resize(): void {
     const width = Math.max(1, this.host.clientWidth)
     const height = Math.max(1, this.host.clientHeight)
-    const previousScale = this.horizontalScale
-    const nextScale = width < 650 ? 0.62 : 1
-    if (previousScale !== nextScale) {
-      this.racers.forEach((racer) => racer.rescaleHorizontal(previousScale, nextScale))
-    }
     this.renderer.setSize(width, height, false)
     this.camera.aspect = width / height
     if (width < 650) {
       this.compact = true
-      this.horizontalScale = nextScale
-      this.track.object.scale.x = this.horizontalScale
       this.duel.setCompactMode(true)
     } else {
       this.compact = false
-      this.horizontalScale = nextScale
-      this.track.object.scale.x = 1
       this.duel.setCompactMode(false)
     }
     this.camera.updateProjectionMatrix()
@@ -195,10 +214,10 @@ export class BeaverRaceScene {
 
   private updateFinishTape(): void {
     if (!this.winnerId || this.track.isFinishTapeTorn) return
-    if (this.phase !== "racing" && this.phase !== "finishing") return
+    if (this.phase !== "finishing") return
     const winner = this.racers.get(this.winnerId)
     const leadingEdge = winner ? winner.object.position.x + winner.object.scale.x * 0.62 : Number.NEGATIVE_INFINITY
-    if (leadingEdge >= FINISH_X * this.horizontalScale) {
+    if (leadingEdge >= this.track.finish.position.x) {
       this.track.tearFinishTape()
     }
   }
@@ -221,23 +240,33 @@ export class BeaverRaceScene {
   }
 
   private desiredCameraPose(): CameraPose {
+    if (this.phase === "preview") {
+      const progress = THREE.MathUtils.clamp((performance.now() - this.previewStartedAt) / PREVIEW_DURATION, 0, 1)
+      return this.preview.cameraPose(progress, this.camera.aspect, this.reducedMotion.matches)
+    }
     const overview = this.overviewPose()
     if (this.phase === "lobby" || this.phase === "countdown") return overview
 
     const packX = this.packCenterX()
     const leaderX = this.fieldFrontX()
     const winnerZ = this.winnerId ? this.racers.get(this.winnerId)?.object.position.z ?? 0 : 0
+    const frontFov = this.compact ? 54 : 43
+    let laneExtent = 0.7
+    this.racers.forEach((racer) => { laneExtent = Math.max(laneExtent, Math.abs(racer.object.position.z) + 0.7) })
+    const fieldDistance = laneExtent / (Math.tan(THREE.MathUtils.degToRad(frontFov / 2)) * this.camera.aspect)
+    const frontOffset = Math.max(this.compact ? 4.5 : 5.6, fieldDistance - (leaderX - packX + 0.35))
     const front: CameraPose = {
-      position: new THREE.Vector3(leaderX + (this.compact ? 4.5 : 5.6), this.compact ? 2.9 : 2.65, 0),
+      position: new THREE.Vector3(leaderX + frontOffset, this.compact ? 2.9 : 2.65, 0),
       target: new THREE.Vector3(packX - 0.35, 0.72, 0),
-      fov: this.compact ? 54 : 43,
+      fov: frontFov,
     }
     const overhead: CameraPose = {
       position: new THREE.Vector3(packX, this.compact ? 12.8 : 12.2, this.compact ? 7.8 : 7.3),
       target: new THREE.Vector3(packX, 0, 0),
       fov: this.compact ? 51 : 42,
     }
-    const finishX = FINISH_X * this.horizontalScale
+    // Track the leader until the real finish arrives, rather than flying ahead to an empty road.
+    const finishX = Math.min(this.track.finish.position.x, leaderX)
     const finish: CameraPose = {
       position: new THREE.Vector3(finishX + (this.compact ? 4.8 : 5.5), this.compact ? 2.9 : 2.55, winnerZ),
       target: new THREE.Vector3(finishX - 0.75, 0.76, winnerZ),
@@ -247,6 +276,7 @@ export class BeaverRaceScene {
       ? 1
       : THREE.MathUtils.clamp(this.elapsed / Math.max(1, this.duration), 0, 1)
 
+    if (this.reducedMotion.matches) return overview
     if (ratio < 0.06) return overview
     if (ratio < 0.18) return blendPose(overview, front, (ratio - 0.06) / 0.12)
     if (ratio < 0.52) return front
@@ -257,9 +287,10 @@ export class BeaverRaceScene {
   }
 
   private overviewPose(): CameraPose {
+    const x = this.phase === "lobby" ? 0 : this.packCenterX()
     return {
-      position: new THREE.Vector3(0, this.compact ? 8.8 : 8.4, this.compact ? 19.5 : 16.2),
-      target: new THREE.Vector3(0, 0.45, -1.2),
+      position: new THREE.Vector3(x, this.compact ? 8.8 : 8.4, this.compact ? 19.5 : 16.2),
+      target: new THREE.Vector3(x, 0.45, -1.2),
       fov: this.compact ? 58 : 40,
     }
   }
@@ -272,7 +303,7 @@ export class BeaverRaceScene {
   }
 
   private fieldFrontX(): number {
-    let front = -7.65 * this.horizontalScale
+    let front = this.course.startX
     this.racers.forEach((racer) => { front = Math.max(front, racer.object.position.x) })
     return front
   }
@@ -283,12 +314,21 @@ export class BeaverRaceScene {
     const delta = Math.min(this.timer.getDelta(), 0.05)
     const elapsed = this.timer.getElapsed()
     this.snow.reducedMotion = this.reducedMotion.matches
-    this.entities.forEach((entity) => entity.update(delta, elapsed))
+    this.travel += (this.targetTravel - this.travel) * (1 - Math.exp(-13 * delta))
+    const finishX = this.course.finishX(this.travel)
+    this.track.setTravel(this.travel, finishX, (this.phase === "racing" || this.phase === "finishing" || this.phase === "finished") && finishX < 22)
+    this.forest.setTravel(this.reducedMotion.matches ? 0 : this.travel * 0.8)
+    this.river.setTravel(this.travel)
+    this.duel.object.position.x = -this.travel
+    this.entities.forEach((entity) => {
+      const stillPreview = this.phase === "preview" && this.reducedMotion.matches
+      if (entity.object.visible) entity.update(stillPreview ? 0 : delta, stillPreview ? 0 : elapsed)
+    })
     this.racers.forEach((view) => view.update(delta))
     this.updateFinishTape()
     this.updateCamera(delta)
     const ratio = this.elapsed / Math.max(1, this.duration)
-    const closeUp = (this.phase === "racing" && ((ratio >= 0.18 && ratio < 0.52) || ratio >= 0.9)) || this.phase === "finishing"
+    const closeUp = !this.reducedMotion.matches && ((this.phase === "racing" && ((ratio >= 0.18 && ratio < 0.52) || ratio >= 0.9)) || this.phase === "finishing")
     this.pullRequestBubbles.update(elapsed, closeUp, this.racers, this.camera)
     this.renderer.render(this.scene, this.camera)
   }

@@ -7,7 +7,7 @@ export class BeaverAnimator {
   constructor(private readonly rig: BeaverRig, private readonly appearance: BeaverAppearance) {}
 
   update(delta: number, speed: number, running: boolean): { readonly bounce: number; readonly lean: number } {
-    const normalizedSpeed = Math.min(1.35, speed / 11)
+    const normalizedSpeed = Math.min(1.35, speed / 4)
     const cadence = running ? (5.5 + normalizedSpeed * 8.5) * this.appearance.gaitCadence : 2
     this.stridePhase += delta * cadence
     const stride = Math.sin(this.stridePhase) * (running ? 0.35 + normalizedSpeed * 0.38 : 0.05)

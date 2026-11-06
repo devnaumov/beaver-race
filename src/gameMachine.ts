@@ -3,6 +3,9 @@ import { createRacer, rerollRacer, type Racer } from "./domain"
 import { RacePlanFactory } from "./race/RacePlanFactory"
 import type { RacerMotion } from "./race/RaceTrajectory"
 import { RacePlan } from "./race/RaceTrajectory"
+import { DEFAULT_RACE_DURATION, PREVIEW_DURATION } from "./race/RaceCourse"
+
+export type RacePhase = "lobby" | "preview" | "countdown" | "racing" | "finishing" | "finished"
 
 export interface GameContext {
   readonly racers: ReadonlyArray<Racer>
@@ -96,7 +99,7 @@ const raceSetup = setup({
     ),
     prepareRace: assign(({ context }) => {
       const winner = context.racers[Math.floor(Math.random() * context.racers.length)]!
-      const duration = 9_200 + Math.floor(Math.random() * 2_600)
+      const duration = context.duration
       const seed = Math.floor(Math.random() * 0xffffffff)
       const racers = context.racers.map((racer) => ({ ...racer, progress: 0, speed: 0 }))
       const racePlan = new RacePlanFactory().create(racers, winner.id, duration, seed)
@@ -139,7 +142,7 @@ export const gameMachine = raceSetup.createMachine({
     winnerId: null,
     countdown: 3,
     elapsed: 0,
-    duration: 10_000,
+    duration: DEFAULT_RACE_DURATION,
     error: null,
     raceNumber: 0,
     racePlan: null,
@@ -151,10 +154,13 @@ export const gameMachine = raceSetup.createMachine({
         REMOVE_RACER: { actions: "removeRacer" },
         REROLL: { actions: "reroll" },
         START: [
-          { guard: "hasEnoughRacers", target: "countdown", actions: "prepareRace" },
+          { guard: "hasEnoughRacers", target: "preview", actions: "prepareRace" },
           { actions: "showStartError" },
         ],
       },
+    },
+    preview: {
+      after: { [PREVIEW_DURATION]: "countdown" },
     },
     countdown: {
       invoke: { src: "measuredCountdownActor" },
@@ -176,7 +182,7 @@ export const gameMachine = raceSetup.createMachine({
       },
     },
     finishing: {
-      after: { 1600: "finished" },
+      after: { 2800: "finished" },
     },
     finished: {
       on: { RESET: { target: "lobby", actions: "resetRace" } },

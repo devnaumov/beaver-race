@@ -31,7 +31,7 @@ export class RacePlanFactory {
         racer.id,
         duration,
         assignment.finalDistance,
-        this.createPhases(assignment.story, racerRandom),
+        this.createPhases(assignment.story, racerRandom, duration),
       )
     })
     return new RacePlan(winnerId, duration, trajectories)
@@ -70,7 +70,10 @@ export class RacePlanFactory {
     return assignments
   }
 
-  private createPhases(story: PaceStory, random: SeededRandom): ReadonlyArray<PacePhase> {
+  private createPhases(story: PaceStory, random: SeededRandom, duration: number): ReadonlyArray<PacePhase> {
+    // Stretch the route, but keep reactions and initial acceleration within a few seconds.
+    const launchScale = Math.min(1, 20_000 / duration)
+    const launch = (reaction: number, acceleration: number) => new LaunchPhase(reaction * launchScale, acceleration * launchScale)
     const cruise = new CruisePhase(
       random.between(1.5, 3.4),
       random.between(0, Math.PI * 2),
@@ -80,7 +83,7 @@ export class RacePlanFactory {
     switch (story) {
       case "winner":
         return [
-          new LaunchPhase(random.between(0.025, 0.055), random.between(0.23, 0.31)),
+          launch(random.between(0.025, 0.055), random.between(0.23, 0.31)),
           cruise,
           new SurgePhase(0.24, 0.4, random.between(0.12, 0.24)),
           new RecoveryPhase(0.42, 0.64, random.between(0.2, 0.32)),
@@ -90,7 +93,7 @@ export class RacePlanFactory {
         ]
       case "frontRunner":
         return [
-          new LaunchPhase(random.between(0.002, 0.014), random.between(0.075, 0.12)),
+          launch(random.between(0.002, 0.014), random.between(0.075, 0.12)),
           cruise,
           new SurgePhase(0.1, 0.36, random.between(0.5, 0.78)),
           new RecoveryPhase(0.4, 0.74, random.between(0.3, 0.44)),
@@ -100,7 +103,7 @@ export class RacePlanFactory {
         ]
       case "laggard":
         return [
-          new LaunchPhase(random.between(0.045, 0.08), random.between(0.28, 0.38)),
+          launch(random.between(0.045, 0.08), random.between(0.28, 0.38)),
           cruise,
           new SurgePhase(0.4, 0.58, random.between(0.14, 0.25)),
           new RecoveryPhase(0.18, 0.5, random.between(0.34, 0.5)),
@@ -110,7 +113,7 @@ export class RacePlanFactory {
         ]
       case "surger":
         return [
-          new LaunchPhase(random.between(0.01, 0.035), random.between(0.16, 0.23)),
+          launch(random.between(0.01, 0.035), random.between(0.16, 0.23)),
           cruise,
           new SurgePhase(0.22, 0.43, random.between(0.38, 0.62)),
           new RecoveryPhase(0.45, 0.66, random.between(0.2, 0.34)),
@@ -120,7 +123,7 @@ export class RacePlanFactory {
         ]
       case "challenger":
         return [
-          new LaunchPhase(random.between(0.008, 0.025), random.between(0.11, 0.18)),
+          launch(random.between(0.008, 0.025), random.between(0.11, 0.18)),
           cruise,
           new SurgePhase(0.15, 0.4, random.between(0.32, 0.52)),
           new RecoveryPhase(0.5, 0.7, random.between(0.16, 0.28)),
@@ -130,7 +133,7 @@ export class RacePlanFactory {
         ]
       case "steady":
         return [
-          new LaunchPhase(random.between(0.012, 0.03), random.between(0.14, 0.21)),
+          launch(random.between(0.012, 0.03), random.between(0.14, 0.21)),
           cruise,
           new SurgePhase(0.28, 0.48, random.between(0.16, 0.28)),
           new RecoveryPhase(0.52, 0.7, random.between(0.1, 0.2)),

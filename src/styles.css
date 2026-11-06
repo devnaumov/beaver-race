@@ -22,7 +22,7 @@ html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--night); }
 button, input { font: inherit; }
 button { color: inherit; }
-button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+button:focus-visible, input:focus-visible, a:focus-visible, .race-results:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
 button:disabled { cursor: not-allowed; opacity: 0.42; }
 
 .app-shell {
@@ -109,11 +109,44 @@ button:disabled { cursor: not-allowed; opacity: 0.42; }
 .winter-glow { position: absolute; z-index: 1; width: 40%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, oklch(95% 0.016 155 / 0.3), transparent 66%); top: -32%; left: 8%; }
 .scene-prompt { position: absolute; z-index: 4; left: 24px; bottom: 20px; background: var(--night); border: 1px solid var(--yellow); padding: 9px 13px; box-shadow: 5px 5px 0 var(--night); transform: rotate(-1deg); }
 .scene-prompt span { display: block; font-size: 8px; letter-spacing: 1.6px; font-weight: 900; color: var(--red); }.scene-prompt b { font: 13px "Russo One"; text-transform: uppercase; }
+.crew-intro { position: absolute; inset: 0; z-index: 4; pointer-events: none; border-block: 20px solid var(--night); animation: crew-reveal .45s cubic-bezier(.16,1,.3,1) both; }
+.crew-intro-heading { position: absolute; top: 18px; left: 24px; padding: 10px 14px; background: var(--night); border: 1px solid var(--line); }
+.crew-intro-heading > span { display: block; color: var(--yellow); font-size: 8px; font-weight: 900; letter-spacing: 2px; }
+.crew-intro-heading > b { display: block; margin: 5px 0; font-size: 24px; font-weight: 900; }
+.crew-intro-heading > small { display: block; color: var(--muted); font-size: 11px; }
+.crew-intro-footer { position: absolute; bottom: 14px; left: 24px; right: 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 11px; background: var(--night); }
+.crew-intro-footer > span { color: var(--yellow); font-size: 9px; letter-spacing: 1.5px; font-weight: 900; }
+.crew-intro-footer > small { color: var(--muted); font-size: 11px; }
+.crew-intro-progress { position: absolute; bottom: -20px; left: 0; right: 0; height: 3px; background: var(--line); }
+.crew-intro-progress > i { display: block; height: 100%; background: var(--yellow); transform-origin: left; animation: crew-progress var(--preview-duration) linear both; }
+@keyframes crew-reveal { from { opacity: 0; } to { opacity: 1; } }
+@keyframes crew-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .countdown { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; text-align: center; background: rgba(34,24,15,.2); animation: flash-in .7s both; }
 .countdown small { color: var(--ink); font: 15px "Russo One"; letter-spacing: 4px; text-shadow: 2px 2px 0 var(--night); }
 .countdown strong { color: var(--yellow); font: 190px/.9 "Russo One"; -webkit-text-stroke: 5px var(--night); filter: drop-shadow(10px 12px 0 var(--red)); }
 .race-clock { position: absolute; z-index: 4; top: 17px; right: 18px; border: 1px solid var(--yellow); background: var(--night); padding: 7px 11px; transform: skew(-4deg); }
 .race-clock small { display: block; font-size: 7px; letter-spacing: 1.4px; font-weight: 900; }.race-clock b { font: 22px "Russo One"; }
+.race-clock { font-variant-numeric: tabular-nums; transform: none; min-width: 104px; }
+.race-clock > span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+.race-hud { position: absolute; z-index: 4; left: 18px; top: 17px; max-width: calc(100% - 160px); padding: 10px 13px; background: var(--night); border: 1px solid var(--line); pointer-events: none; }
+.race-hud > span { display: block; color: var(--green); font-size: 10px; font-weight: 900; letter-spacing: 1.5px; animation: race-callout .25s cubic-bezier(.16,1,.3,1) both; }
+.race-hud > b { display: block; font-size: 22px; font-weight: 900; margin: 3px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.race-hud > small { display: block; color: var(--muted); font-size: 8px; letter-spacing: 1.1px; }
+.race-hud.is-final { border-color: var(--yellow); }.race-hud.is-final > span { color: var(--yellow); }
+.course-hud { position: absolute; bottom: 18px; left: 24px; right: 24px; z-index: 4; background: var(--night); border: 1px solid var(--line); padding: 10px 14px 12px; pointer-events: none; }
+.course-labels { display: flex; justify-content: space-between; gap: 10px; font-size: 8px; letter-spacing: 1.2px; font-weight: 800; color: var(--muted); }
+.course-labels > b { color: var(--yellow); }
+.course-map { position: relative; height: 21px; margin: 8px 4px 0; border-inline: 2px solid var(--muted); background: oklch(95% 0.016 155 / .06); }
+.course-map::after { content: ""; position: absolute; right: -2px; width: 5px; top: 0; bottom: 0; background: repeating-linear-gradient(var(--ink) 0 3px, var(--night) 3px 6px); }
+.course-fill { position: absolute; inset: 0; background: oklch(81% 0.08 160 / .18); transform-origin: left; transition: transform 100ms linear; }
+.course-map > i { position: absolute; width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 1px var(--night); transform: translate(-50%,-50%); }
+.course-map > i.is-leader { width: 10px; height: 10px; z-index: 1; outline: 1px solid var(--ink); outline-offset: 2px; }
+.race-results { max-width: 480px; max-height: 220px; overflow-y: auto; list-style: none; margin: 24px 0 0; padding: 0; border-block: 1px solid var(--line); }
+.race-results > li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); text-align: left; }
+.race-results > li:last-child { border-bottom: 0; }.race-results > li:first-child { color: var(--yellow); }
+.race-results span { color: var(--muted); font-size: 12px; }.race-results b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }.race-results small { font-size: 10px; }
+.winner-overlay .confetti { opacity: .5; }.winner-overlay .confetti.c2 { opacity: .3; }.winner-overlay .confetti.c3 { opacity: .2; }
+@keyframes race-callout { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .race-console { background: var(--panel); min-height: 122px; border-top: 2px solid var(--frame); display: grid; grid-template-columns: minmax(0, 1fr) 250px; }
 .standings { padding: 13px 17px; min-width: 0; }
 .standings > div { display: flex; gap: 7px; margin-top: 9px; overflow: hidden; }
@@ -182,6 +215,12 @@ footer b { font-family: "Russo One"; } footer small { grid-column: 2; color: var
   .broadcast-panel { order: 1; border-right: 0; grid-template-rows: 34px minmax(420px, 68vh) auto; }.fight-label { display: none; }.broadcast-bar { justify-content: space-between; }
   .race-console { grid-template-columns: 1fr 142px; }.start-button { padding: 12px; }.start-button b { font-size: 19px; }.start-button i { display: none; }
   .standings > div > span:nth-child(n+4) { display: none; }
+  .race-hud { left: 12px; top: 12px; padding: 8px 10px; max-width: calc(100% - 135px); }.race-hud > b { font-size: 18px; }.race-hud > span { font-size: 8px; }.race-hud > small { font-size: 7px; }
+  .race-clock { top: 12px; right: 12px; min-width: 96px; }.race-clock b { font-size: 20px; }
+  .course-hud { left: 12px; right: 12px; bottom: 12px; }.course-labels { font-size: 7px; letter-spacing: .7px; }
+  .crew-intro { border-block-width: 14px; }.crew-intro-heading { top: 10px; left: 12px; padding: 8px 11px; }.crew-intro-heading > b { font-size: 20px; }
+  .crew-intro-footer { left: 12px; right: 12px; bottom: 10px; }.crew-intro-footer > span { font-size: 7px; letter-spacing: .8px; }.crew-intro-footer > small { font-size: 9px; }.crew-intro-progress { bottom: -14px; }
+  .race-results { margin-inline: auto; max-height: 160px; width: 100%; }.race-results > li { gap: 8px; }
   .sticker-deck { padding: 0 13px; gap: 8px; }.sticker-deck > div { grid-template-columns: repeat(4, 1fr); }.sticker-deck b { border-bottom: 1px solid var(--ink); }.sticker-deck b:nth-child(4n) { border-right: 0; }
   footer { padding: 30px 18px; grid-template-columns: 1fr; } footer small { grid-column: 1; }
   .winner-overlay { grid-template-columns: 1fr; align-content: center; text-align: center; padding: 30px 18px; }.winner-copy h2 { font-size: clamp(52px, 17vw, 100px); letter-spacing: -4px; margin: 22px 0; }.winner-copy p { font-size: 13px; }.winner-copy button { margin-top: 8px; }.winner-beaver { width: min(72vw, 360px); margin-top: 55px; }.winner-word { font-size: 23vw; }
@@ -194,5 +233,5 @@ footer b { font-family: "Russo One"; } footer small { grid-column: 2; color: var
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
