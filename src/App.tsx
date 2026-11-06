@@ -4,7 +4,7 @@ import { databaseStickers } from "./domain"
 import { driverIconUrl } from "./driverIcons"
 import { gameAtom, sendGameEvent } from "./store"
 import { mountRaceScene } from "./three/BeaverRaceScene"
-import { costumeNames } from "./halloween"
+import { costumeNames } from "./christmas"
 
 const BeaverMark = () => (
   <svg className="brand-mark" viewBox="0 0 72 72" aria-hidden="true">
@@ -14,8 +14,9 @@ const BeaverMark = () => (
     <path d="M59 31 68 35l-9 5Z" fill="#20150f" />
     <rect x="52" y="35" width="7" height="10" rx="1" fill="#fff8dc" stroke="#20150f" strokeWidth="2" />
     <path d="m14 46-9 12 19-3" fill="#5f3926" stroke="#20150f" strokeWidth="4" strokeLinejoin="round" />
-    <path d="m29 23 11-21 10 22Z" fill="#392847" stroke="#20150f" strokeWidth="3" />
-    <path d="M25 25h30" stroke="#f5a14b" strokeWidth="6" strokeLinecap="round" />
+    <path d="M28 23Q29 2 47 5l9 12-12-5-1 13Z" fill="#c83f4f" stroke="#20150f" strokeWidth="3" />
+    <path d="M25 25h25" stroke="#edf5ec" strokeWidth="7" strokeLinecap="round" />
+    <circle cx="56" cy="17" r="5" fill="#edf5ec" stroke="#20150f" strokeWidth="2" />
   </svg>
 )
 
@@ -33,7 +34,7 @@ const WinnerBeaver = ({ fur, accent, sticker }: { fur: string; accent: string; s
       <span className="winner-eye left" />
       <span className="winner-eye right" />
       <div className="winner-muzzle"><i /><b /><b /></div>
-      <div className="winner-crown"><span /></div>
+      <div className="winner-hat"><span /></div>
     </div>
   </div>
 )
@@ -67,35 +68,35 @@ export const App = () => {
         </a>
         <div className="edition">
           <span className="live-dot" />
-          Halloween special · October 31
+          Christmas special · December 25
         </div>
         <div className="tech-badge"><span>POWERED BY</span> EFFECT 4 / XSTATE</div>
       </header>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <div className="eyebrow"><span>AFTER DARK</span> THE HAUNTED FOREST CUP</div>
-          <h1>All treats.<br />No <i>retreats.</i></h1>
-          <p>The moon is out. The fangs are on. Assemble your costumed crew and race through the haunted forest.</p>
+          <div className="eyebrow"><span>LET IT SNOW</span> THE CHRISTMAS FOREST CUP</div>
+          <h1>Jingle bells.<br /><i>Beaver trails.</i></h1>
+          <p>Fresh snow. Twinkling trees. A little friendly competition. Gather your festive crew and race for Christmas glory.</p>
         </div>
         <div className="hero-stats">
-          <div><strong>{String(racers.length).padStart(2, "0")}</strong><span>LITTLE<br />MONSTERS</span></div>
+          <div><strong>{String(racers.length).padStart(2, "0")}</strong><span>MERRY<br />RACERS</span></div>
           <div><strong>{String(raceNumber).padStart(2, "0")}</strong><span>RACE<br />NUMBER</span></div>
-          <div><strong>{isRacing ? Math.max(1, Math.ceil((duration - elapsed) / 1_000)) : isFinishing ? "0" : "∞"}</strong><span>SECONDS<br />TO FRIGHT</span></div>
+          <div><strong>{isRacing ? Math.max(1, Math.ceil((duration - elapsed) / 1_000)) : isFinishing ? "0" : "∞"}</strong><span>SECONDS<br />TO GLORY</span></div>
         </div>
       </section>
 
       <section className="race-layout">
         <aside className="roster-panel">
           <div className="panel-heading">
-            <div><span>01 / THE CREW</span><h2>Night racers</h2></div>
+            <div><span>01 / THE CREW</span><h2>Merry racers</h2></div>
             <b>{racers.length}/12</b>
           </div>
 
           <form className="add-racer" onSubmit={addRacer}>
-            <label htmlFor="racer-name">Name your little monster</label>
+            <label htmlFor="racer-name">Name your festive racer</label>
             <div>
-              <input id="racer-name" name="name" placeholder="e.g. Spooky Steve" autoComplete="off" disabled={!isLobby} maxLength={22} />
+              <input id="racer-name" name="name" placeholder="e.g. Jolly Holly" autoComplete="off" disabled={!isLobby} maxLength={22} />
               <button type="submit" disabled={!isLobby || racers.length >= 12} aria-label="Add racer">+</button>
             </div>
             {error && <p className="form-error" role="alert">{error}</p>}
@@ -126,22 +127,22 @@ export const App = () => {
 
         <section className="broadcast-panel">
           <div className="broadcast-bar">
-            <div className="on-air"><span /> LIVE AT MIDNIGHT</div>
+            <div className="on-air"><span /> LIVE FROM THE NORTH POLE</div>
             <div className="fight-label">DBEAVER <b>VS</b> CLOUDBEAVER</div>
-            <div className="camera-label">CAM 01 · HAUNTED TRACK</div>
+            <div className="camera-label">CAM 01 · SNOWY TRACK</div>
           </div>
           <div className="scene-wrap">
-            <div className="moon-glare" />
+            <div className="winter-glow" />
             <div className="three-stage" ref={mountRaceScene} />
             <div className="scene-vignette" />
-            {isLobby && <div className="scene-prompt"><span>WELCOME TO THE NIGHT SHIFT</span><b>Ready, set, boo.</b></div>}
-            {isCountdown && <div className="countdown" key={countdown}><small>GET YOUR FRIGHT ON</small><strong>{countdown}</strong></div>}
+            {isLobby && <div className="scene-prompt"><span>A LITTLE NORTH POLE MAGIC</span><b>Ready, set, snow.</b></div>}
+            {isCountdown && <div className="countdown" key={countdown}><small>TIME TO JINGLE</small><strong>{countdown}</strong></div>}
             {(isRacing || isFinishing) && <div className="race-clock"><small>RACE TIME</small><b>{(elapsed / 1_000).toFixed(1)}s</b></div>}
           </div>
 
           <div className="race-console">
             <div className="standings">
-              <span className="console-label">THE FRIGHT LEADERBOARD</span>
+              <span className="console-label">THE MERRY LEADERBOARD</span>
               <div>
                 {standings.slice(0, 5).map((racer, index) => (
                   <span key={racer.id} className={index === 0 && !isLobby ? "leader" : ""}>
@@ -151,7 +152,7 @@ export const App = () => {
               </div>
             </div>
             <button className="start-button" type="button" onClick={() => sendGameEvent({ type: "START" })} disabled={!isLobby}>
-              <span>{isLobby ? "RELEASE THE" : isFinished || isFinishing ? "FINISH" : "RACE IN PROGRESS"}</span>
+              <span>{isLobby ? "JINGLE ALL THE WAY" : isFinished || isFinishing ? "FINISH" : "RACE IN PROGRESS"}</span>
               <b>{isLobby ? "BEAVERS" : "•••"}</b>
               <i>→</i>
             </button>
@@ -160,24 +161,24 @@ export const App = () => {
       </section>
 
       <section className="sticker-deck" aria-label="Available team stickers">
-        <span>PARTNERS IN FRIGHT</span>
+        <span>PARTNERS IN CHEER</span>
         <div>{databaseStickers.map((sticker) => <b key={sticker.name} style={{ "--sticker": sticker.color } as React.CSSProperties}><img src={driverIconUrl(sticker.id)} alt="" /><small>{sticker.name}</small></b>)}</div>
       </section>
 
-      <footer><b>BEAVER RACE © 2026 · HALLOWEEN EDITION</b><span>Fair races. Wicked costumes.</span><small>No beavers were haunted in the making of this race.</small></footer>
+      <footer><b>BEAVER RACE © 2026 · CHRISTMAS EDITION</b><span>Fair races. Festive faces.</span><small>No presents were lost in the making of this race.</small></footer>
 
       {isFinished && winner && (
         <div className="winner-overlay" role="dialog" aria-modal="true" aria-labelledby="winner-title">
           <div className="confetti c1" /><div className="confetti c2" /><div className="confetti c3" />
           <div className="winner-rays" />
           <div className="winner-copy">
-            <span>THE NIGHT BELONGS TO · RACE #{String(raceNumber).padStart(2, "0")}</span>
+            <span>CHRISTMAS GLORY GOES TO · RACE #{String(raceNumber).padStart(2, "0")}</span>
             <h2 id="winner-title">{winner.name}</h2>
             <p>{costumeNames[winner.accessory]} · Team {winner.sticker.name}</p>
-            <button type="button" onClick={() => sendGameEvent({ type: "RESET" })}>One more fright <b>↻</b></button>
+            <button type="button" onClick={() => sendGameEvent({ type: "RESET" })}>One more jingle <b>↻</b></button>
           </div>
           <WinnerBeaver fur={winner.fur} accent={winner.accent} sticker={driverIconUrl(winner.sticker.id)} />
-          <div className="winner-word">BOO-YAH!</div>
+          <div className="winner-word">HO HO GO!</div>
         </div>
       )}
     </main>

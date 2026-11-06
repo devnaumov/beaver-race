@@ -8,6 +8,7 @@ import { BackgroundDuel } from "./environment/BackgroundDuel"
 import { ForestBackdrop } from "./environment/ForestBackdrop"
 import { RiverEnvironment } from "./environment/RiverEnvironment"
 import { SkyEnvironment } from "./environment/SkyEnvironment"
+import { Snowfall } from "./environment/Snowfall"
 import { TrackEnvironment } from "./environment/TrackEnvironment"
 import { PullRequestBubbles } from "./PullRequestBubbles"
 
@@ -39,6 +40,8 @@ export class BeaverRaceScene {
   private readonly racers = new Map<string, RacerView>()
   private readonly racerLayer = new THREE.Group()
   private readonly sky = new SkyEnvironment()
+  private readonly snow = new Snowfall()
+  private readonly reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
   private readonly river = new RiverEnvironment()
   private readonly track = new TrackEnvironment()
   private readonly forest = new ForestBackdrop()
@@ -57,20 +60,20 @@ export class BeaverRaceScene {
   private cameraInitialized = false
 
   constructor(private readonly host: HTMLElement) {
-    this.entities = [this.sky, this.forest, this.river, this.track, this.duel]
+    this.entities = [this.sky, this.forest, this.river, this.track, this.duel, this.snow]
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFShadowMap
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.15
-    this.renderer.domElement.setAttribute("aria-label", "Halloween beaver race with costumed racers, glowing pumpkins, bats, and a moonlit forest")
+    this.renderer.domElement.setAttribute("aria-label", "Christmas beaver race with festive costumes, presents, decorated fir trees, and falling snow")
     this.host.append(this.renderer.domElement)
     this.pullRequestBubbles = new PullRequestBubbles(this.host)
 
     this.camera.position.set(0, 8.2, 15.5)
     this.camera.lookAt(0, 0.45, -1)
-    this.scene.add(this.sky.object, this.forest.object, this.river.object, this.track.object, this.duel.object, this.racerLayer)
+    this.scene.add(this.sky.object, this.forest.object, this.river.object, this.track.object, this.duel.object, this.snow.object, this.racerLayer)
     this.addLighting()
 
     const subscription = gameActor.subscribe((snapshot) => {
@@ -111,8 +114,8 @@ export class BeaverRaceScene {
   readonly cleanup: () => void
 
   private addLighting(): void {
-    this.scene.add(new THREE.HemisphereLight("#b8b2ef", "#35233d", 2.1))
-    const sun = new THREE.DirectionalLight("#ffe0bc", 3.2)
+    this.scene.add(new THREE.HemisphereLight("#d6edf1", "#324e48", 2.1))
+    const sun = new THREE.DirectionalLight("#fff0cf", 3.2)
     sun.position.set(-5, 11, 7)
     sun.castShadow = true
     sun.shadow.mapSize.set(1536, 1536)
@@ -121,7 +124,7 @@ export class BeaverRaceScene {
     sun.shadow.camera.top = 11
     sun.shadow.camera.bottom = -7
     this.scene.add(sun)
-    const moonlight = new THREE.DirectionalLight("#969bff", 2.3)
+    const moonlight = new THREE.DirectionalLight("#a3d8ef", 2.3)
     moonlight.position.set(-7, 7, -10)
     this.scene.add(moonlight)
   }
@@ -279,6 +282,7 @@ export class BeaverRaceScene {
     this.timer.update()
     const delta = Math.min(this.timer.getDelta(), 0.05)
     const elapsed = this.timer.getElapsed()
+    this.snow.reducedMotion = this.reducedMotion.matches
     this.entities.forEach((entity) => entity.update(delta, elapsed))
     this.racers.forEach((view) => view.update(delta))
     this.updateFinishTape()
