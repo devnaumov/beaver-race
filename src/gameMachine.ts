@@ -3,6 +3,7 @@ import { createRacer, rerollRacer, type Racer } from "./domain"
 import { RacePlanFactory } from "./race/RacePlanFactory"
 import type { RacerMotion } from "./race/RaceTrajectory"
 import { RacePlan } from "./race/RaceTrajectory"
+import { selectRaceWinner } from "./race/winnerSelection"
 
 export interface GameContext {
   readonly racers: ReadonlyArray<Racer>
@@ -95,7 +96,7 @@ const raceSetup = setup({
         : context,
     ),
     prepareRace: assign(({ context }) => {
-      const winner = context.racers[Math.floor(Math.random() * context.racers.length)]!
+      const winner = selectRaceWinner(context.racers)
       const duration = 9_200 + Math.floor(Math.random() * 2_600)
       const seed = Math.floor(Math.random() * 0xffffffff)
       const racers = context.racers.map((racer) => ({ ...racer, progress: 0, speed: 0 }))
