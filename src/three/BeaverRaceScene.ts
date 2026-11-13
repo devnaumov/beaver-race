@@ -311,6 +311,8 @@ export class BeaverRaceScene {
   private animate = (): void => {
     this.frame = requestAnimationFrame(this.animate)
     this.timer.update()
+    // The fitting room owns the foreground renderer; keep the race paused visually behind it.
+    if (document.querySelector(".character-editor[open], .winner-overlay")) return
     const delta = Math.min(this.timer.getDelta(), 0.05)
     const elapsed = this.timer.getElapsed()
     this.snow.reducedMotion = this.reducedMotion.matches

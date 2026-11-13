@@ -30,12 +30,13 @@ export class PreviewBeaver extends SceneEntity {
     this.label = new NameTag(racer.name)
     this.label.object.position.y = 0.05
     this.offset = racer.seed % 100 / 10
-    this.present = index % 5 === 2 ? giftBox(0.55, racer.accent) : null
+    const freePaws = !racer.equipment.hand && !racer.equipment.offhand
+    this.present = index % 5 === 2 && freePaws ? giftBox(0.55, racer.accent) : null
     if (this.present) {
       this.present.position.set(0.72, 0.68, 0)
       this.model.object.add(this.present)
     }
-    if (index % 5 === 3) {
+    if (index % 5 === 3 && freePaws) {
       const mug = MeshFactory.mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.2, 12), "#bb3548", [1, 1, 1], [0.68, 0.82, 0])
       const handle = MeshFactory.mesh(new THREE.TorusGeometry(0.09, 0.025, 5, 12), "#edc86f", [1, 1, 1], [0.68, 0.83, 0.15])
       this.model.object.add(mug, handle)
@@ -69,7 +70,7 @@ export class PreviewBeaver extends SceneEntity {
     rightLeg.pivot.rotation.set(0, 0, 0)
     this.model.object.position.y = 0.2 + Math.sin(time * 1.8) * 0.012
     this.model.object.rotation.z = Math.sin(time * 1.2) * 0.015
-    tail.mesh.rotation.x = Math.sin(time * 1.3) * 0.04
+    tail.pivot.rotation.x = Math.sin(time * 1.3) * 0.04
 
     switch (this.activity) {
       case "sitting":

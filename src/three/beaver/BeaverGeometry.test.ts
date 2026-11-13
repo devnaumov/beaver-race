@@ -1,6 +1,7 @@
 import * as THREE from "three"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createRacer, type BeaverAppearance } from "../../domain"
+import { emptyEquipment } from "../../equipment"
 import { MeshFactory } from "../core/MeshFactory"
 import { AccessoryFactory } from "./Accessories"
 import { BeaverModel } from "./BeaverModel"
@@ -48,12 +49,13 @@ describe("beaver geometry attachments", () => {
     vi.spyOn(MeshFactory, "texture").mockReturnValue(new THREE.Texture())
     const racer = createRacer("badge", 0.42)
     const bodyScale: BeaverAppearance["bodyScale"] = [0.82, 1.3, 0.8]
-    const model = new BeaverModel({ ...racer, accessory: "Корона", appearance: { ...racer.appearance, bodyScale } })
-    const badgeGroup = model.object.children[9] as THREE.Group
+    const model = new BeaverModel({ ...racer, equipment: emptyEquipment(), appearance: { ...racer.appearance, bodyScale } })
+    const badgeGroup = model.object.getObjectByName("driver-badge") as THREE.Group
     const badge = badgeGroup.children[0] as THREE.Mesh
-    const torsoRadiusZ = 0.58 * 0.9 * bodyScale[2]
+    const torsoRadiusZ = 0.48 * bodyScale[2] + 0.42 * 0.19
 
     expect(badge.position.z - torsoRadiusZ).toBeLessThan(0.02)
+    expect(badge.position.z).toBeGreaterThan(torsoRadiusZ)
   })
 
   it("aligns glasses with both eyes on the front of the face", () => {

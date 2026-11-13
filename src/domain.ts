@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import type { DriverIconId } from "./driverIcons"
+import { costumeEquipment, type Equipment } from "./equipment"
 
 export interface DatabaseSticker {
   readonly id: DriverIconId
@@ -28,10 +29,15 @@ export const accessories = [
   "Молния на хвосте",
 ] as const
 
-const furColors = ["#9b5a2e", "#6f3c25", "#ba7540", "#4f3028", "#c48b5b", "#7e4d35"] as const
-const accentColors = ["#ff4f3d", "#16a085", "#f5b335", "#3975db", "#9b59b6", "#ef6c35"] as const
+export const furColors = ["#9b5a2e", "#6f3c25", "#ba7540", "#4f3028", "#c48b5b", "#7e4d35", "#e6d7bd", "#354548"] as const
+export const accentColors = ["#bb3548", "#23735a", "#edc86f", "#3975db", "#8ed9e8", "#ef6c35"] as const
 const bellyColors = ["#e8bb82", "#f0cf99", "#d99d68", "#c78c63", "#f3d8aa"] as const
-const bodyTypes = ["compact", "athletic", "round", "tall"] as const
+export const bodyTypes = ["compact", "athletic", "round", "tall"] as const
+export const bodyScaleFor = (bodyType: BeaverAppearance["bodyType"]): BeaverAppearance["bodyScale"] =>
+  bodyType === "compact" ? [1.08, 0.98, 1.04]
+  : bodyType === "athletic" ? [0.92, 1.12, 0.92]
+  : bodyType === "round" ? [1.22, 1.08, 1.16]
+  : [0.88, 1.22, 0.94]
 
 export interface BeaverAppearance {
   readonly bodyType: (typeof bodyTypes)[number]
@@ -56,6 +62,7 @@ export interface Racer {
   readonly accessory: (typeof accessories)[number]
   readonly sticker: DatabaseSticker
   readonly appearance: BeaverAppearance
+  readonly equipment: Equipment
   readonly progress: number
   readonly speed: number
   readonly seed: number
@@ -75,17 +82,15 @@ export const createRacer = (name: string, salt = Math.random()): Racer =>
     Effect.sync(() => {
       const seed = (hashName(name) + Math.floor(salt * 1_000_000)) >>> 0
       const bodyType = bodyTypes[(seed >>> 2) % bodyTypes.length]!
-      const bodyScale: BeaverAppearance["bodyScale"] =
-        bodyType === "compact" ? [1.16, 0.94, 1.06]
-        : bodyType === "athletic" ? [0.82, 1.3, 0.8]
-        : bodyType === "round" ? [1.32, 1.16, 1.18]
-        : [0.78, 1.47, 0.86]
+      const bodyScale = bodyScaleFor(bodyType)
+      const accessory = accessories[(seed >>> 8) % accessories.length]!
       return {
         id: `${seed.toString(36)}-${Date.now().toString(36)}`,
         name,
         fur: furColors[seed % furColors.length]!,
         accent: accentColors[(seed >>> 4) % accentColors.length]!,
-        accessory: accessories[(seed >>> 8) % accessories.length]!,
+        accessory,
+        equipment: costumeEquipment(accessory),
         sticker: databaseStickers[(seed >>> 12) % databaseStickers.length]!,
         appearance: {
           bodyType,

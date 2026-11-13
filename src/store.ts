@@ -2,8 +2,10 @@ import { Atom } from "effect/unstable/reactivity"
 import * as AtomRegistry from "effect/unstable/reactivity/AtomRegistry"
 import { createActor } from "xstate"
 import { gameMachine, type GameEvent } from "./gameMachine"
+import { restoreCharacters, serializeCharacters } from "./character"
 
 const racerNamesStorageKey = "beaver-race:racer-names"
+const charactersStorageKey = "beaver-race:characters:v1"
 
 const loadRacerNames = (): ReadonlyArray<string> | undefined => {
   try {
@@ -19,19 +21,26 @@ const loadRacerNames = (): ReadonlyArray<string> | undefined => {
   }
 }
 
-export const gameActor = createActor(gameMachine, { input: { racerNames: loadRacerNames() } })
+const loadCharacters = () => {
+  try { return restoreCharacters(localStorage.getItem(charactersStorageKey)) }
+  catch { return undefined }
+}
+export const gameActor = createActor(gameMachine, { input: { racers: loadCharacters(), racerNames: loadRacerNames() } })
 export const gameRegistry = AtomRegistry.make({ defaultIdleTTL: Number.POSITIVE_INFINITY })
 export const gameAtom = Atom.make(gameActor.getSnapshot())
 
 let savedNames: string | undefined
+let savedCharacters: string | undefined
 
 gameActor.subscribe((snapshot) => {
   gameRegistry.set(gameAtom, snapshot)
   const names = JSON.stringify(snapshot.context.racers.map((racer) => racer.name))
-  if (names === savedNames) return
-  savedNames = names
+  const characters = serializeCharacters(snapshot.context.racers)
   try {
-    localStorage.setItem(racerNamesStorageKey, names)
+    if (names !== savedNames) localStorage.setItem(racerNamesStorageKey, names)
+    if (characters !== savedCharacters) localStorage.setItem(charactersStorageKey, characters)
+    savedNames = names
+    savedCharacters = characters
   } catch {
     // Keep the game usable when browser storage is unavailable.
   }

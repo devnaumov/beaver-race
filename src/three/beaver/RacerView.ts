@@ -44,4 +44,9 @@ export class RacerView extends SceneEntity {
     this.model.object.position.y = pose.bounce
     this.model.object.rotation.z += (pose.lean - this.model.object.rotation.z) * (1 - Math.exp(-8 * delta))
   }
+
+  override dispose(): void {
+    this.animator.dispose()
+    super.dispose()
+  }
 }

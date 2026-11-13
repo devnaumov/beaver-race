@@ -1,10 +1,12 @@
 import { useAtomValue } from "@effect/atom-react"
-import type { FormEvent, KeyboardEvent } from "react"
+import { useState, type FormEvent, type KeyboardEvent } from "react"
 import { databaseStickers } from "./domain"
 import { driverIconUrl } from "./driverIcons"
 import { gameAtom, sendGameEvent } from "./store"
 import { mountRaceScene } from "./three/BeaverRaceScene"
-import { costumeNames } from "./christmas"
+import { equipmentSummary } from "./equipment"
+import { CharacterEditor } from "./CharacterEditor"
+import { CharacterPortrait } from "./CharacterPortrait"
 import { PREVIEW_DURATION } from "./race/RaceCourse"
 
 const BeaverMark = () => (
@@ -21,25 +23,6 @@ const BeaverMark = () => (
   </svg>
 )
 
-const WinnerBeaver = ({ fur, accent, sticker }: { fur: string; accent: string; sticker: string }) => (
-  <div className="winner-beaver" style={{ "--fur": fur, "--accent": accent } as React.CSSProperties} aria-hidden="true">
-    <div className="winner-tail" />
-    <div className="winner-body">
-      <span className="winner-sticker"><img src={sticker} alt="" /></span>
-      <div className="winner-arm left" />
-      <div className="winner-arm right" />
-    </div>
-    <div className="winner-head">
-      <div className="winner-ear left" />
-      <div className="winner-ear right" />
-      <span className="winner-eye left" />
-      <span className="winner-eye right" />
-      <div className="winner-muzzle"><i /><b /><b /></div>
-      <div className="winner-hat"><span /></div>
-    </div>
-  </div>
-)
-
 const keepResultsFocus = (event: KeyboardEvent<HTMLDivElement>) => {
   if (event.key !== "Tab") return
   const first = event.currentTarget.querySelector<HTMLElement>(".race-results")
@@ -51,6 +34,7 @@ const keepResultsFocus = (event: KeyboardEvent<HTMLDivElement>) => {
 }
 
 export const App = () => {
+  const [editingId, setEditingId] = useState<string | null>(null)
   const snapshot = useAtomValue(gameAtom)
   const { racers, winnerId, countdown, elapsed, duration, error, raceNumber } = snapshot.context
   const isLobby = snapshot.matches("lobby")
@@ -60,6 +44,7 @@ export const App = () => {
   const isFinishing = snapshot.matches("finishing")
   const isFinished = snapshot.matches("finished")
   const winner = racers.find((racer) => racer.id === winnerId)
+  const editingRacer = isLobby ? racers.find((racer) => racer.id === editingId) : undefined
   const standings = [...racers].sort((a, b) => b.progress - a.progress)
   const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1_000))
   const leader = standings[0]
@@ -138,10 +123,11 @@ export const App = () => {
                 <div className="fur-swatch" style={{ background: racer.fur }}><span><img src={driverIconUrl(racer.sticker.id)} alt={racer.sticker.name} /></span></div>
                 <div className="racer-info">
                   <h3>{racer.name}</h3>
-                  <p>{costumeNames[racer.accessory]}</p>
+                  <p title={equipmentSummary(racer.equipment)}>{equipmentSummary(racer.equipment)}</p>
                   <span>{racer.sticker.name}</span>
                 </div>
                 {isLobby && <div className="racer-actions">
+                  <button type="button" className="edit-racer" onClick={() => setEditingId(racer.id)} aria-label={`Edit ${racer.name}`}>Edit</button>
                   <button type="button" onClick={() => sendGameEvent({ type: "REROLL", id: racer.id })} aria-label={`Change costume for ${racer.name}`}>↻</button>
                   <button type="button" onClick={() => sendGameEvent({ type: "REMOVE_RACER", id: racer.id })} aria-label={`Remove ${racer.name}`}>×</button>
                 </div>}
@@ -222,16 +208,17 @@ export const App = () => {
           <div className="winner-copy">
             <span>CHRISTMAS GLORY GOES TO · RACE #{String(raceNumber).padStart(2, "0")}</span>
             <h2 id="winner-title">{winner.name}</h2>
-            <p>{costumeNames[winner.accessory]} · Team {winner.sticker.name}</p>
+            <p>{equipmentSummary(winner.equipment)} · Team {winner.sticker.name}</p>
             <ol className="race-results" aria-label="Final standings" tabIndex={0}>
               {standings.map((racer, index) => <li key={racer.id}><span>{String(index + 1).padStart(2, "0")}</span><b>{racer.name}</b><small>{index === 0 ? `${duration / 1_000}s · WINNER` : racer.sticker.name}</small></li>)}
             </ol>
             <button ref={(node) => { node?.focus({ preventScroll: true }) }} type="button" onClick={resetRace}>Race again <b>↻</b></button>
           </div>
-          <WinnerBeaver fur={winner.fur} accent={winner.accent} sticker={driverIconUrl(winner.sticker.id)} />
+          <CharacterPortrait racer={winner} />
           <div className="winner-word">HO HO GO!</div>
         </div>
       )}
+      {editingRacer && <CharacterEditor key={editingRacer.id} racer={editingRacer} onClose={() => setEditingId(null)} />}
     </main>
   )
 }

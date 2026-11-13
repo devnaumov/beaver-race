@@ -4,6 +4,7 @@ import { RacePlanFactory } from "./race/RacePlanFactory"
 import type { RacerMotion } from "./race/RaceTrajectory"
 import { RacePlan } from "./race/RaceTrajectory"
 import { DEFAULT_RACE_DURATION, PREVIEW_DURATION } from "./race/RaceCourse"
+import { parseCustomization, type CharacterCustomization } from "./character"
 
 export type RacePhase = "lobby" | "preview" | "countdown" | "racing" | "finishing" | "finished"
 
@@ -22,6 +23,7 @@ export type GameEvent =
   | { readonly type: "ADD_RACER"; readonly name: string }
   | { readonly type: "REMOVE_RACER"; readonly id: string }
   | { readonly type: "REROLL"; readonly id?: string }
+  | { readonly type: "CUSTOMIZE_RACER"; readonly id: string; readonly customization: CharacterCustomization }
   | { readonly type: "START" }
   | { readonly type: "COUNTDOWN_TICK" }
   | { readonly type: "RACE_FRAME"; readonly elapsed: number; readonly motions: ReadonlyArray<RacerMotion> }
@@ -62,7 +64,7 @@ const raceSetup = setup({
   types: {
     context: {} as GameContext,
     events: {} as GameEvent,
-    input: {} as { readonly racerNames?: ReadonlyArray<string> } | void,
+    input: {} as { readonly racerNames?: ReadonlyArray<string>; readonly racers?: ReadonlyArray<Racer> } | void,
   },
   actors: {
     measuredCountdownActor,
@@ -97,6 +99,12 @@ const raceSetup = setup({
           }
         : context,
     ),
+    customizeRacer: assign(({ context, event }) => {
+      if (event.type !== "CUSTOMIZE_RACER") return context
+      const customization = parseCustomization(event.customization)
+      if (!customization) return { ...context, error: "Некорректные настройки персонажа" }
+      return { ...context, error: null, racers: context.racers.map((racer) => racer.id === event.id ? { ...racer, ...customization } : racer) }
+    }),
     prepareRace: assign(({ context }) => {
       const winner = context.racers[Math.floor(Math.random() * context.racers.length)]!
       const duration = context.duration
@@ -138,7 +146,7 @@ export const gameMachine = raceSetup.createMachine({
   id: "beaver-race",
   initial: "lobby",
   context: ({ input }) => ({
-    racers: (input && input.racerNames?.map((name) => createRacer(name))) ?? [createRacer("Алекс"), createRacer("Маша"), createRacer("Дима")],
+    racers: (input && (input.racers ?? input.racerNames?.map((name) => createRacer(name)))) ?? [createRacer("Алекс"), createRacer("Маша"), createRacer("Дима")],
     winnerId: null,
     countdown: 3,
     elapsed: 0,
@@ -153,6 +161,7 @@ export const gameMachine = raceSetup.createMachine({
         ADD_RACER: { actions: "addRacer" },
         REMOVE_RACER: { actions: "removeRacer" },
         REROLL: { actions: "reroll" },
+        CUSTOMIZE_RACER: { actions: "customizeRacer" },
         START: [
           { guard: "hasEnoughRacers", target: "preview", actions: "prepareRace" },
           { actions: "showStartError" },

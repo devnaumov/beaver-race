@@ -9,6 +9,7 @@ export abstract class SceneEntity {
     this.object.traverse((child) => {
       if (!(child instanceof THREE.Mesh) && !(child instanceof THREE.Sprite)) return
       child.geometry?.dispose()
+      if (child instanceof THREE.SkinnedMesh) child.skeleton.dispose()
       const materials = Array.isArray(child.material) ? child.material : [child.material]
       for (const material of materials) {
         for (const value of Object.values(material)) {

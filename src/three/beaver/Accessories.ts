@@ -47,7 +47,7 @@ export class ScarfAccessory extends BeaverAccessory {
 }
 
 export class CarolerAccessory extends BeaverAccessory {
-  constructor(appearance: BeaverAppearance) {
+  constructor(appearance: BeaverAppearance, withHat = true) {
     super()
     const lensX = eyeForwardX(appearance, appearance.eyeSpacing) + 0.12
     for (const side of [-1, 1]) {
@@ -58,7 +58,7 @@ export class CarolerAccessory extends BeaverAccessory {
     }
     const bridgeLength = Math.max(0.1, appearance.eyeSpacing * 2 - 0.23)
     this.object.add(MeshFactory.mesh(new THREE.BoxGeometry(0.025, 0.025, bridgeLength), "#b88c43", [1, 1, 1], [lensX, 1.35, 0]))
-    this.object.add(
+    if (withHat) this.object.add(
       MeshFactory.mesh(new THREE.SphereGeometry(0.34, 14, 10), "#23735a", [1, 0.85, 1], [0.08, 1.64, 0]),
       MeshFactory.mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.12, 16), "#edf5ec", [1, 1, 1], [0.08, 1.57, 0]),
       MeshFactory.mesh(new THREE.SphereGeometry(0.12, 10, 8), "#edc86f", [1, 1, 1], [0.08, 1.98, 0]),
@@ -67,7 +67,7 @@ export class CarolerAccessory extends BeaverAccessory {
 }
 
 export class ReindeerAccessory extends BeaverAccessory {
-  constructor(appearance: BeaverAppearance) {
+  constructor(appearance: BeaverAppearance, withNose = true) {
     super()
     for (const side of [-1, 1]) {
       const antler = new THREE.Group()
@@ -82,7 +82,7 @@ export class ReindeerAccessory extends BeaverAccessory {
       this.object.add(antler)
     }
     const noseX = 0.49 + 0.28 * appearance.muzzleScale[0]
-    this.object.add(MeshFactory.mesh(new THREE.SphereGeometry(0.11, 12, 8), "#d8424e", [1, 1, 1], [noseX, 1.16, 0]))
+    if (withNose) this.object.add(MeshFactory.mesh(new THREE.SphereGeometry(0.11, 12, 8), "#d8424e", [1, 1, 1], [noseX, 1.16, 0]))
   }
 }
 

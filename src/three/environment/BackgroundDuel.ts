@@ -1,5 +1,6 @@
 import type { Racer } from "../../domain"
 import { createRacer, databaseStickers } from "../../domain"
+import { costumeEquipment } from "../../equipment"
 import { SceneEntity } from "../core/SceneEntity"
 import { FlagBearerBeaver } from "../beaver/BeaverModel"
 import { CloudBeaverFlag, DBeaverFlag, type BrandFlag } from "./BrandFlag"
@@ -14,6 +15,7 @@ const mascot = (name: string, fur: string, accent: string, seed: number): Racer 
   fur,
   accent,
   accessory: name === "DBeaver" ? "Красная кепка" : "Котелок",
+  equipment: costumeEquipment(name === "DBeaver" ? "Красная кепка" : "Котелок"),
   sticker: databaseStickers[0]!,
 })
 
